@@ -2,6 +2,7 @@
 const { Client, RichEmbed } = require('discord.js');
 const client = new Client();
 const auth = require('./auth.json');
+var gameState = false;
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -97,6 +98,20 @@ client.on('message', msg => {
                     msg.channel.send(embed);
                 }
                 break;
+            case 'dice':
+                if(!gameState){
+                    var mentions = msg.mentions.users;
+                    var players = constructDice(mentions);
+                    gameState = true;
+                    msg.channel.send("Starting game...");
+                    msg.channel.send("Rolling for turn priority...");
+                    for(player of players){
+                        msg.channel.send(player.Name + " rolled " + (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1));
+                    }
+                }else{
+                    msg.channel.send("Game already running.");
+                }
+                
         }
     }
 
@@ -105,7 +120,7 @@ client.on('message', msg => {
 client.login(auth.token);
 
 function getUserFromMention(mention) {
-    if (!mention) return;
+    if (!mention) return;var mentions = msg.mentions.users;
 
     if (mention.startsWith('<@') && mention.endsWith('>')) {
         mention = mention.slice(2, -1);
@@ -116,4 +131,14 @@ function getUserFromMention(mention) {
 
         console.log(client.users.get(mention));
     }
+}
+
+
+function constructDice(mentions){
+    var players = new Array();
+    for (const [key, value] of mentions) {
+        var player = {Name: value.username, Dice: 3, Roll: ""};
+        players.push(player);
+    }
+    return players;
 }
