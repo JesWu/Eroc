@@ -10,7 +10,7 @@ client.on('ready', () => {
 client.on('message', msg => {
     var dietcoke = msg.content.toLowerCase();
     if(dietcoke.includes("diet coke") || dietcoke.includes("dietcoke")){
-        //msg.channel.send("<@152656874427121666>")
+        
     }
     getUserFromMention(msg.content);
 
