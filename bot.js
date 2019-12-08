@@ -3,6 +3,17 @@ const { Client, RichEmbed } = require('discord.js');
 const client = new Client();
 const auth = require('./auth.json');
 var gameState = false;
+var players = new Array();
+var Turn = {
+    CurDice: 0,
+    Turn: 0,
+    RollFreq: null
+}
+var curGuess = {
+    Num: 0,
+    NumDice: 0,
+    ID: null
+};
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -43,6 +54,10 @@ client.on('message', msg => {
     if (content.charAt(0) == '!') {
         content = content.slice(1);
         switch (content) {
+            case 'bad':
+            case 'Bad': 
+                msg.reply("Eric");
+                break;
             case 'Eric':
                 msg.reply("Eroc > Eric.");
                 break;
@@ -100,20 +115,90 @@ client.on('message', msg => {
                 break;
             case 'dice':
                 if (!gameState) {
-                    var mentions = msg.mentions.users;
-                    var players = constructDice(mentions);
-                    //gameState = true;
-                    msg.channel.send("Starting game...");
-                    //msg.channel.send("Rolling for turn priority...");
-                    var curPlayer = rollPriority(players, msg);
+                    if (msg.mentions.everyone) {
+                        msg.reply("Nice try guy");
+                    } else {
+                        var mentions = msg.mentions.users;
+                        Turn.Turn = 0;
+                        players = constructDice(mentions);
+                        //gameState = true;
+                        msg.channel.send("Starting game...");
+                        //msg.channel.send("Rolling for turn priority...");
+                        var curPlayer = rollPriority(players, msg);
+                        nextTurn(players);
+                    }
                 } else {
                     msg.channel.send("Game already running.");
                 }
                 break;
-            case 'exit':
-                gameState = false;
+            case 'peek':
+                for (player of players) {
+                    console.log(player.ID + " " + msg.author.id);
+                    if (player.ID == msg.author.id) {
+                        msg.author.send("Turn " + Turn.Turn + ": " + player.Roll);
+                        msg.channel.send("DM sent!");
+                        return;
+                    }
+                }
+                msg.channel.send("You are not in the current game.");
                 break;
+            case 'guess':
+                if (args[1] != null && !isNaN(args[1]) && args[2] != null && !isNaN(args[2])) {
+                    var num = parseInt(args[2], 10);
+                    var numDice = parseInt(args[1], 10);
+                    if(num >= 1 && num <= 6 && numDice >= 1 && numDice <= Turn.CurDice){
+                        if(curGuess.NumDice < numDice || (curGuess.NumDice == numDice && curGuess.Num < num)){
+                            msg.reply("Has guessed: " + numDice + " dice for " + num);
+                            curGuess = {
+                                Num: num,
+                                NumDice: numDice,
+                                ID: msg.author.id
+                            }
+                        }else{
+                            msg.reply("Your guess must be higher in number of dice or number.");
+                        }
+                    }else{
+                        msg.reply("Invalid inputs/ dice amount too high.");
+                    }
+                    break;
+                }
+            case 'bs':
+                if(curGuess.ID == null){
+                    msg.reply("No guess currently.");
+                    return;
+                }
+                msg.reply("Has called BS on <@" + curGuess.ID + ">'s guess of " + curGuess.NumDice + " dice for " + curGuess.Num);
 
+                var rollStr = Turn.CurDice + " rolls for this turn | ";
+                for(var i = 1; i <= Turn.RollFreq.length; i++){
+                    rollStr += i + ": " + Turn.RollFreq[i - 1] + " |";
+                }
+                msg.channel.send(rollStr);
+                if(isValidGuess(curGuess)){
+                    msg.channel.send("<@" + curGuess.ID + ">'s bs was wrong :cry: -1 dice");
+                }else{
+                    msg.channel.send("<@" + msg.author.id + ">'s guess was wrong :cry: -1 dice");
+                }
+                break;
+            case 'exit':
+
+                gameState = false;
+                players = new Array();
+                Turn = {
+                    CurDice: 0,
+                    Turn: 0,
+                    RollFreq: null
+                }
+                curGuess = {
+                    Num: 0,
+                    NumDice: 0,
+                    ID: null
+                };
+                msg.channel.send("Game terminated.");
+                break;
+            case 'echo':
+                msg.channel.send(msg.content.slice(6));
+                break;
         }
     }
 
@@ -148,6 +233,7 @@ function constructDice(mentions) {
 function rollPriority(players, msg) {
     var max = 0;
     var firstPlayers = new Array();
+    var rollStr = "";
     for (player of players) {
         var roll = (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1);
         if (max < roll) {
@@ -157,10 +243,12 @@ function rollPriority(players, msg) {
         } else if (max == roll) {
             firstPlayers.push(player);
         }
-        //msg.channel.send(player.Name + " rolled " + roll);
+        rollStr += player.Name + " rolled " + roll + "\n";
     }
+    msg.channel.send(rollStr);
     while (firstPlayers.length > 1) {
         msg.channel.send("Tie detected! rerolling...");
+        rollStr = "";
         for (player of firstPlayers) {
             max = 0;
             var roll = (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1);
@@ -171,9 +259,41 @@ function rollPriority(players, msg) {
             } else if (max == roll) {
                 firstPlayers.push(player);
             }
-            //msg.channel.send(player.Name + " rolled " + roll);
+            rollStr += player.Name + " rolled " + roll + "\n";
         }
+        msg.channel.send(rollStr);
     }
     msg.channel.send("<@" + firstPlayers[0].ID + ">" + " goes first with a roll of: " + max);
     return firstPlayers[0];
 }
+
+function nextTurn(players) {
+    Turn.CurDice = 0;
+    Turn.RollFreq = new Array(6);
+    Turn.RollFreq.fill(0);
+    for (player of players) {
+        player.Roll = "";
+        for (var i = 0; i < player.Dice; i++) {
+            var roll = (Math.floor(Math.random() * Math.floor(parseInt(6, 10))) + 1);
+            if (roll == 1) {
+                for (var j = 0; j < Turn.RollFreq.length; j++) {
+                    Turn.RollFreq[j] += 1;
+                }
+            } else {
+                Turn.RollFreq[roll - 1] += 1;
+            }
+            player.Roll += roll + " ";
+        }
+        Turn.CurDice += player.Dice;
+    }
+    Turn.Turn++;
+    console.log(Turn.CurDice + " " + Turn.RollFreq);
+}
+
+function isValidGuess(guess) {
+    console.log(guess.NumDice + " " + Turn.RollFreq[guess.Num - 1] + " " + guess.Num)
+    if(guess.NumDice > Turn.RollFreq[guess.Num - 1]){
+        return false;
+    }
+    return true;
+} 
