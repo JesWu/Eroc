@@ -99,19 +99,21 @@ client.on('message', msg => {
                 }
                 break;
             case 'dice':
-                if(!gameState){
+                if (!gameState) {
                     var mentions = msg.mentions.users;
                     var players = constructDice(mentions);
-                    gameState = true;
+                    //gameState = true;
                     msg.channel.send("Starting game...");
-                    msg.channel.send("Rolling for turn priority...");
-                    for(player of players){
-                        msg.channel.send(player.Name + " rolled " + (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1));
-                    }
-                }else{
+                    //msg.channel.send("Rolling for turn priority...");
+                    var curPlayer = rollPriority(players, msg);
+                } else {
                     msg.channel.send("Game already running.");
                 }
-                
+                break;
+            case 'exit':
+                gameState = false;
+                break;
+
         }
     }
 
@@ -120,7 +122,7 @@ client.on('message', msg => {
 client.login(auth.token);
 
 function getUserFromMention(mention) {
-    if (!mention) return;var mentions = msg.mentions.users;
+    if (!mention) return; var mentions = msg.mentions.users;
 
     if (mention.startsWith('<@') && mention.endsWith('>')) {
         mention = mention.slice(2, -1);
@@ -134,11 +136,44 @@ function getUserFromMention(mention) {
 }
 
 
-function constructDice(mentions){
+function constructDice(mentions) {
     var players = new Array();
     for (const [key, value] of mentions) {
-        var player = {Name: value.username, Dice: 3, Roll: ""};
+        var player = { Name: value.username, ID: value.id, Dice: 3, Roll: "" };
         players.push(player);
     }
     return players;
+}
+
+function rollPriority(players, msg) {
+    var max = 0;
+    var firstPlayers = new Array();
+    for (player of players) {
+        var roll = (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1);
+        if (max < roll) {
+            max = roll;
+            firstPlayers = [];
+            firstPlayers.push(player);
+        } else if (max == roll) {
+            firstPlayers.push(player);
+        }
+        //msg.channel.send(player.Name + " rolled " + roll);
+    }
+    while (firstPlayers.length > 1) {
+        msg.channel.send("Tie detected! rerolling...");
+        for (player of firstPlayers) {
+            max = 0;
+            var roll = (Math.floor(Math.random() * Math.floor(parseInt(12, 10))) + 1);
+            if (max < roll) {
+                max = roll;
+                firstPlayers = [];
+                firstPlayers.push(player);
+            } else if (max == roll) {
+                firstPlayers.push(player);
+            }
+            //msg.channel.send(player.Name + " rolled " + roll);
+        }
+    }
+    msg.channel.send("<@" + firstPlayers[0].ID + ">" + " goes first with a roll of: " + max);
+    return firstPlayers[0];
 }
