@@ -214,10 +214,11 @@ client.on('message', msg => {
                         }
                     }
                 }
-                nextTurn(players);
+                nextTurn(players, msg);
+                //check if win
                 break;
-            case 'exit':
 
+            case 'exit':
                 gameState = false;
                 players = new Array();
                 Turn = {
@@ -241,21 +242,6 @@ client.on('message', msg => {
 });
 
 client.login(auth.token);
-
-function getUserFromMention(mention) {
-    if (!mention) return; var mentions = msg.mentions.users;
-
-    if (mention.startsWith('<@') && mention.endsWith('>')) {
-        mention = mention.slice(2, -1);
-
-        if (mention.startsWith('!')) {
-            mention = mention.slice(1);
-        }
-
-        console.log(client.users.get(mention));
-    }
-}
-
 
 function constructDice(mentions) {
     var players = new Array();
@@ -303,7 +289,7 @@ function rollPriority(players, msg) {
     return firstPlayers[0];
 }
 
-function nextTurn(players) {
+function nextTurn(players, msg) {
     Turn.CurDice = 0;
     Turn.RollFreq = new Array(6);
     Turn.RollFreq.fill(0);
@@ -312,9 +298,14 @@ function nextTurn(players) {
         NumDice: 0,
         ID: null
     };
-    for (player of players) {
-        player.Roll = "";
-        for (var i = 0; i < player.Dice; i++) {
+    for (var j = 0; j < players.length; j++) {
+        if(players[j].Dice == 0){
+            msg.channel.send(players[j].Name + " has been eliminated.");
+            players = players.splice(j, 1);
+            break;
+        }
+        players[j].Roll = "";
+        for (var i = 0; i < players[j].Dice; i++) {
             var roll = (Math.floor(Math.random() * Math.floor(parseInt(6, 10))) + 1);
             if (roll == 1) {
                 for (var j = 0; j < Turn.RollFreq.length; j++) {
@@ -323,7 +314,7 @@ function nextTurn(players) {
             } else {
                 Turn.RollFreq[roll - 1] += 1;
             }
-            player.Roll += roll + " ";
+            players[j].Roll += roll + " ";
         }
         Turn.CurDice += player.Dice;
     }
