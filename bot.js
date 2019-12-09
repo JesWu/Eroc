@@ -21,6 +21,13 @@ client.on('ready', () => {
 
 client.on('message', msg => {
     if (msg.author.bot) return;
+    if (msg.author.id == "152656874427121666"){
+        msg.react('1️⃣')
+        .then(() => msg.react('9️⃣'))
+        .then(() => msg.react('0️⃣'))
+        .then(() => msg.react('7️⃣'))
+        .catch(() => console.error('One of the emojis failed to react.'));
+    }
     var drinks = msg.content.toLowerCase();
     if (drinks.includes("diet coke") || drinks.includes("dietcoke")) {
         msg.channel.send("<@152656874427121666>");
@@ -34,6 +41,9 @@ client.on('message', msg => {
     }
     if (msg.mentions.everyone) {
         msg.reply("Kys");
+    }
+    if (drinks.includes("no comment")) {
+        msg.channel.send("<@178759982039171073>");
     }
     /*
     if(drinks.includes("mae")){
@@ -54,6 +64,12 @@ client.on('message', msg => {
     if (content.charAt(0) == '!') {
         content = content.slice(1);
         switch (content) {
+            case 'uwu':
+                msg.reply('owo');
+                break;
+            case 'owo':
+                msg.reply('uwu');
+                break;
             case 'bad':
             case 'Bad': 
                 msg.reply("Eric");
@@ -92,11 +108,20 @@ client.on('message', msg => {
                 console.log(args[2]);
                 if (args[1] != null && !isNaN(args[1]) && args[2] != null && !isNaN(args[2])) {
                     var numRolls = parseInt(args[2], 10);
+                    if(numRolls > 1000){
+                        msg.channel.send("Number of rolls too large.(greater than 1000)");
+                        return;
+                    }
                     var results = "";
+                    msg.channel.send(args[2] + " rolls : ");
                     for (var i = 0; i < numRolls; i++) {
+                        if(i != 1 && i % 50 == 1){
+                            msg.channel.send(results);
+                            results = "";
+                        }
                         results += " " + (Math.floor(Math.random() * Math.floor(parseInt(args[1], 10))) + 1);
                     }
-                    msg.channel.send(args[2] + " rolls : " + results);
+                    msg.channel.send(results);
                 } else {
                     msg.channel.send("Invalid args. Format: Diet Coke");
                 }
@@ -176,9 +201,20 @@ client.on('message', msg => {
                 msg.channel.send(rollStr);
                 if(isValidGuess(curGuess)){
                     msg.channel.send("<@" + curGuess.ID + ">'s bs was wrong :cry: -1 dice");
+                    for (var i = 0; i < players.length; i++) {
+                        if(players[i].ID == curGuess.ID){
+                            players[i].Dice -= 1;
+                        }
+                    }
                 }else{
                     msg.channel.send("<@" + msg.author.id + ">'s guess was wrong :cry: -1 dice");
+                    for (var i = 0; i < players.length; i++) {
+                        if(players[i].ID == curGuess.ID){
+                            players[i].Dice -= 1;
+                        }
+                    }
                 }
+                nextTurn(players);
                 break;
             case 'exit':
 
@@ -271,6 +307,11 @@ function nextTurn(players) {
     Turn.CurDice = 0;
     Turn.RollFreq = new Array(6);
     Turn.RollFreq.fill(0);
+    curGuess = {
+        Num: 0,
+        NumDice: 0,
+        ID: null
+    };
     for (player of players) {
         player.Roll = "";
         for (var i = 0; i < player.Dice; i++) {
