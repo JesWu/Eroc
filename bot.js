@@ -20,7 +20,7 @@ client.on("message", msg => {
     switch (content) {
       case "Help":
       case "help":
-        msg.channel.send("Lmao u think this has documentation?");
+        msg.channel.send("!game, !roll, !pic, !peek, !guess, !bs, !exit, !uwuify, !echo");
         break;
       case "roll":
       case "Roll":
