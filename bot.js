@@ -3,6 +3,7 @@ const client = new Client();
 const auth = require("./auth.json");
 const dice = require("./liarsdice.js");
 const poll = require("./poll.js");
+var interval = null;
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -139,12 +140,39 @@ client.on("message", msg => {
         if (!poll.isPoll()) {
           poll.createPoll(authorID, question);
           msg.reply(
-            "Your poll has been created. Please vote using !y for yes and !n for no. !pollresults for poll results. !closepoll to close poll."
+            "Your poll has been created. Please vote using !y for yes and !n for no. !pollresults for poll results. !closepoll to close poll. Poll will close automatically in 60 seconds."
           );
           var embed = new RichEmbed()
             .setTitle(poll.getQuestion())
             .setColor(0x3ff3ff)
             .setDescription("Yes: " + poll.getYes() + "\nNo: " + poll.getNo());
+          interval = setInterval(function() {
+            msg.reply("Poll closed.");
+            var resultStr = "";
+            if (poll.getYes() == poll.getNo()) {
+              resultStr = "Equal Yes & No.";
+            } else if (poll.getYes() > poll.getNo()) {
+              resultStr = "Result is: Yes";
+            } else {
+              resultStr = "Result is: No";
+            }
+
+            var embed = new RichEmbed()
+              .setTitle(poll.getQuestion())
+              .setColor(0xff0000)
+              .setDescription(
+                "Yes: " +
+                  poll.getYes() +
+                  "\nNo: " +
+                  poll.getNo() +
+                  "\n" +
+                  resultStr
+              );
+            msg.channel.send(embed);
+            poll.closePoll(authorID);
+            clearInterval(interval);
+            return;
+          }, 60000);
           msg.channel.send(embed);
         } else {
           msg.reply("Error: a poll may be currently running.");
@@ -193,20 +221,28 @@ client.on("message", msg => {
         if (poll.isOwner(authorID)) {
           msg.reply("Poll closed.");
           var resultStr = "";
-          if(poll.getYes() == poll.getNo()){
+          if (poll.getYes() == poll.getNo()) {
             resultStr = "Equal Yes & No.";
-          }else if(poll.getYes() > poll.getNo()){
+          } else if (poll.getYes() > poll.getNo()) {
             resultStr = "Result is: Yes";
-          }else{
+          } else {
             resultStr = "Result is: No";
           }
 
           var embed = new RichEmbed()
             .setTitle(poll.getQuestion())
             .setColor(0xff0000)
-            .setDescription("Yes: " + poll.getYes() + "\nNo: " + poll.getNo() + "\n" + resultStr);
+            .setDescription(
+              "Yes: " +
+                poll.getYes() +
+                "\nNo: " +
+                poll.getNo() +
+                "\n" +
+                resultStr
+            );
           msg.channel.send(embed);
           poll.closePoll(authorID);
+          clearInterval(interval);
           return;
         }
         msg.reply("Error: do not own poll.");
@@ -217,6 +253,8 @@ client.on("message", msg => {
 
 client.login(auth.token);
 
-function isVowel(char){
-  return (char == 'a' || char == 'e' || char == 'i' || char == 'o' || char == 'u');
+function isVowel(char) {
+  return (
+    char == "a" || char == "e" || char == "i" || char == "o" || char == "u"
+  );
 }
