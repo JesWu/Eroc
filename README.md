@@ -32,6 +32,7 @@ node bot.js
 TBD...
 
 ## Author
-Jeffrey Wu https://github.com/JesWu/
+**Jeffrey Wu** - [JesWu](https://github.com/JesWu/)
 
-## Acknowledgements
+## Built using
+* [Discordjs](https://discord.js.org/#/) 
