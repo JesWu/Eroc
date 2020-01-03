@@ -82,10 +82,12 @@ client.on("message", msg => {
         }
         if (sr.length == 0) {
           msg.reply("No search to select from.");
+          return;
         }
         var selectNum = parseInt(args[1], 10) - 1;
         if (selectNum >= sr.length || selectNum < 0) {
           msg.reply("Enter a valid number.");
+          return;
         }
         if (msg.member.voiceChannel) {
           if (!msg.member.voiceChannel.connection) {
