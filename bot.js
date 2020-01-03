@@ -14,6 +14,7 @@ var streamOptions = {
 };
 var musicQueue = [];
 var interval = null;
+var sr = [];
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -33,6 +34,91 @@ client.on("message", msg => {
   if (content.charAt(0) == "~") {
     content = content.slice(1);
     switch (content) {
+      case "search":
+        var modStr = msg.content.slice(8);
+        let filter;
+        sr = [];
+        msg.channel.send("Searching for: " + modStr);
+
+        ytsr.getFilters(modStr, function(err, filters) {
+          if (err) throw err;
+          filter = filters.get("Type").find(o => o.name === "Video");
+          ytsr.getFilters(filter.ref, function(err, filters) {
+            if (err) throw err;
+            filter = filters
+              .get("Duration")
+              .find(o => o.name.startsWith("Short"));
+            var options = {
+              limit: 5,
+              nextpageRef: filter.ref
+            };
+            ytsr(null, options, function(err, searchResults) {
+              if (err) throw err;
+              for (const result of searchResults.items) {
+                sr.push(result);
+              }
+              var searchStr = "Results: \n";
+              for (var i = 0; i < sr.length; i++) {
+                searchStr +=
+                  i +
+                  1 +
+                  ". " +
+                  sr[i].title +
+                  " - " +
+                  sr[i].author.name +
+                  " (" +
+                  sr[i].duration +
+                  ")\n";
+              }
+              msg.channel.send(searchStr);
+            });
+          });
+        });
+        break;
+      case "select":
+        if (isNaN(args[1])) {
+          msg.reply("Please enter a number.");
+          return;
+        }
+        if (sr.length == 0) {
+          msg.reply("No search to select from.");
+        }
+        var selectNum = parseInt(args[1], 10) - 1;
+        if (selectNum >= sr.length || selectNum < 0) {
+          msg.reply("Enter a valid number.");
+        }
+        if (msg.member.voiceChannel) {
+          if (!msg.member.voiceChannel.connection) {
+            msg.member.voiceChannel
+              .join()
+              .then(connection => {
+                const yt = ytdl(sr[selectNum].link, {
+                  filter: "audioonly",
+                  quality: "highestaudio",
+                  highWaterMark: 1 << 25
+                });
+                var dispatcher = connection.playStream(yt, streamOptions);
+                yt.on("info", info => {
+                  msg.channel.send(
+                    "Now playing: " + info.title + " :musical_note:"
+                  );
+                });
+                dispatcher.on("end", function() {
+                  dispatcher = null;
+                  console.log("End event logged.");
+                  nextSong(connection, msg);
+                });
+              })
+              .catch(console.log);
+          } else {
+            musicQueue.push({ url: "" + sr[selectNum].link, info: sr[selectNum]});
+            msg.reply(sr[selectNum].title + " has been added to queue.");
+            return;
+          }
+        } else {
+          msg.reply("You need to join a voice channel first!");
+        }
+        break;
       case "join":
         if (msg.member.voiceChannel) {
           msg.member.voiceChannel
@@ -58,7 +144,7 @@ client.on("message", msg => {
           var infoString = "";
           for (let i = 0; i < musicQueue.length; i++) {
             infoString += i + 1 + ". " + musicQueue[i].info.title + "\n";
-            if(infoString.length > 1900){
+            if (infoString.length > 1900) {
               msg.channel.send(infoString);
               infoString = "";
             }
@@ -94,24 +180,29 @@ client.on("message", msg => {
                 });
               })
               .catch(console.log);
-              if(ytpl.validateURL(args[1])){
-                ytpl(args[1]).then(playListInfo => {
-                  msg.channel.send("Imported " + playListInfo.total_items + " from playlist: " + playListInfo.title);
-                  for(const item of playListInfo.items){
-                    musicQueue.push({ url: "" + item.url, info: item });
-                  }
-                  musicQueue.splice(0, 1);
-                });
-              }
+            if (ytpl.validateURL(args[1])) {
+              ytpl(args[1]).then(playListInfo => {
+                msg.channel.send(
+                  "Imported " +
+                    playListInfo.total_items +
+                    " from playlist: " +
+                    playListInfo.title
+                );
+                for (const item of playListInfo.items) {
+                  musicQueue.push({ url: "" + item.url, info: item });
+                }
+                musicQueue.splice(0, 1);
+              });
+            }
           } else {
-            if(ytpl.validateURL(args[1])){
+            if (ytpl.validateURL(args[1])) {
               console.log("Playlist Found!");
               ytpl(args[1]).then(playListInfo => {
-                for(const item of playListInfo.items){
+                for (const item of playListInfo.items) {
                   musicQueue.push({ url: "" + item.url, info: item });
                 }
               });
-            }else{
+            } else {
               ytdl.getInfo(args[1]).then(info => {
                 musicQueue.push({ url: "" + args[1], info: info });
               });
@@ -134,7 +225,7 @@ client.on("message", msg => {
       case "pause":
         if (msg.member.voiceChannel) {
           const dispatcher = msg.member.voiceChannel.connection.dispatcher;
-          dispatcher.pause(); 
+          dispatcher.pause();
           msg.reply("Song paused.");
         } else {
           msg.reply("You need to join a voice channel first!p");
