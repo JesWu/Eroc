@@ -1,5 +1,5 @@
 # Eroc
-Friendly neighborhood discord bot
+Basic Private Server Discord Music bot
 
 ## Getting Started
 Setup instructions for getting Eroc up & running.
@@ -7,7 +7,7 @@ Setup instructions for getting Eroc up & running.
 ### Prerequisites
 You will need:
 - A discord account
-- Nodejs (v10.17.0)
+- Nodejs
 
 ### Installation
 Clone the given repository in your location of choice.
