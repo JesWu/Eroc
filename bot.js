@@ -6,8 +6,10 @@ const commands = ["play", "pause", "resume", "queue", "skip", "volume", "leave",
 const poll = require("./poll.js");
 const ytdl = require("ytdl-core-discord");
 const ytsr = require('ytsr');
+const ytpl = require('ytpl');
 
 var musicQueue = [];
+var queueMsg = null;
 var interval = null;
 
 client.on("ready", () => {
@@ -20,7 +22,7 @@ client.on("message", async msg => {
   //if the message comes from a bot ignore it
   if (msg.author.bot) return;
 
-  //console.log(msg.author.username + ": " + msg.author.id);
+  console.log(msg.author.username + ": " + msg.author.id);
 
   var authorID = msg.author.id;
 
@@ -35,6 +37,11 @@ client.on("message", async msg => {
         if (msg.member.voice.channel) {
           const connection = await msg.member.voice.channel.join();
           const dispatcher = connection.play(require("path").join(__dirname, './nggyu.mp3'));
+
+          dispatcher.on('finish', () => {
+            msg.member.voice.channel.leave();
+          });
+
         } else {
           msg.reply("You need to join a voice channel first!");
         }
@@ -48,63 +55,111 @@ client.on("message", async msg => {
             return;
           }
 
+          //case where the bot is not in the voice channel
           if (musicQueue.length == 0 && msg.guild.voice == undefined || msg.guild.voice.connection == null) {
+            //if it is a playlist, start playing the first song and add the rest to the queue.
+            if (ytpl.validateID(args[1])) {
+
+              await await ytpl(args[1], { pages: Infinity, limit: Infinity }).catch((err) => {
+                msg.reply("" + err);
+                return;
+              });
+
+              let playlistItems = await (await ytpl(args[1], { pages: Infinity, limit: Infinity })).items;
+              for (var i = 1; i < playlistItems.length; i++) {
+                musicQueue.push({ url: "" + playlistItems[i].shortUrl, title: playlistItems[i].title, length: playlistItems[i].duration });
+              }
+              msg.channel.send("Playlist Detected! adding " + playlistItems.length + " songs to queue.");
+            }
+
+            //just play the song
             const connection = await msg.member.voice.channel.join();
-            const dispatcher = connection.play(await ytdl(args[1]), { type: 'opus' });
+            const dispatcher = connection.play(await ytdl(args[1]).catch((err) => {
+              msg.reply("" + err);
+              connection.disconnect();
+          }), { type: 'opus' });
 
             msg.channel.send(
               "Now playing: " + (await ytdl.getInfo(args[1])).videoDetails.title + " :musical_note:"
             );
 
+            //on finish event attempt to play next song
             dispatcher.on('finish', () => {
               nextSong(connection, msg);
             });
+          //ensure that the user adding the songs is in the voice channel with the bot.
+          } else if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
+            //if it is a playlist then add the songs of the playlist to the queue
+            if (ytpl.validateID(args[1])) {
 
-          } else {
-            //formatting for music queue
-            let title = (await ytdl.getInfo(args[1])).videoDetails.title;
-            msg.reply(title + " has been added to the queue.");
-            let lengthInt = (await ytdl.getInfo(args[1])).videoDetails.lengthSeconds;
-            let lengthStr = "" + Math.floor(lengthInt / 60) + ":";
-            if (lengthInt % 60 == 0) {
-              lengthStr += "00";
-            } else if (lengthInt % 60 < 10) {
-              lengthStr += "0" + lengthInt % 60;
-            } else {
-              lengthStr += lengthInt % 60;
+              await await ytpl(args[1], { pages: Infinity, limit: Infinity }).catch((err) => {
+                msg.reply("" + err);
+                return;
+              });
+
+              let playlistItems = await (await ytpl(args[1], { pages: Infinity, limit: Infinity })).items;
+              for (var i = 0; i < playlistItems.length; i++) {
+                musicQueue.push({ url: "" + playlistItems[i].shortUrl, title: playlistItems[i].title, length: playlistItems[i].duration });
+              }
+              msg.channel.send("Playlist Detected! adding " + playlistItems.length + " songs to queue.");
+            //or else just add the song to the queue
+            }else{
+              //formatting for music queue
+              console.log("Attempting to add song...");
+
+              await ytdl.getInfo(args[1]).catch((err) => {
+                msg.reply("" + err);
+                return;
+              });
+
+              let title = (await ytdl.getInfo(args[1])).videoDetails.title;
+              msg.reply(title + " has been added to the queue.");
+              let lengthInt = (await ytdl.getInfo(args[1])).videoDetails.lengthSeconds;
+              let lengthStr = "" + Math.floor(lengthInt / 60) + ":";
+              if (lengthInt % 60 == 0) {
+                lengthStr += "00";
+              } else if (lengthInt % 60 < 10) {
+                lengthStr += "0" + lengthInt % 60;
+              } else {
+                lengthStr += lengthInt % 60;
+              }
+              musicQueue.push({ url: "" + (await ytdl.getInfo(args[1])).videoDetails.video_url, title: title, length: lengthStr });
+              console.log(musicQueue);
             }
-            musicQueue.push({ url: "" + (await ytdl.getInfo(args[1])).videoDetails.video_url, title: title, length: lengthStr });
-            //console.log(musicQueue);
           }
         } else {
           msg.reply("You need to join a voice channel first!");
         }
         break;
       case "skip":
-        if (msg.member.voice.channel) {
+        //ensure user is in voice channel with bot
+        if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
           msg.guild.voice.connection.dispatcher.end();
         } else {
-          msg.reply("You need to join a voice channel first!");
+          msg.reply("You need to join the voice channel with the bot first!");
         }
         break;
       case "pause":
-        if (msg.member.voice.channel) {
+        //ensure user is in voice channel with bot
+        if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
           msg.guild.voice.connection.dispatcher.pause();
           msg.reply("Song paused.");
         } else {
-          msg.reply("You need to join a voice channel first!");
+          msg.reply("You need to join the voice channel with the bot first!");
         }
         break;
       case "resume":
-        if (msg.member.voice.channel) {
+        //ensure user is in voice channel with bot
+        if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
           msg.guild.voice.connection.dispatcher.resume();
           msg.reply("Song resumed.");
         } else {
-          msg.reply("You need to join a voice channel first!");
+          msg.reply("You need to join the voice channel with the bot first!");
         }
         break;
       case "volume":
-        if (msg.member.voice.channel) {
+        //ensure user is in voice channel with bot
+        if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
           if (isNaN(args[1]) || args[1] < 0 || args[1] > 100) {
             msg.reply("Enter a valid number (0-100)");
             return;
@@ -112,7 +167,7 @@ client.on("message", async msg => {
           msg.guild.voice.connection.dispatcher.setVolume(args[1] / 100);
           msg.reply("Volume set to:" + args[1]);
         } else {
-          msg.reply("you are not in a voice channel!");
+          msg.reply("You need to join the voice channel with the bot first!");
         }
         break;
       case "queue":
@@ -121,16 +176,63 @@ client.on("message", async msg => {
             msg.channel.send("No music in queue.");
             return;
           }
-          let queueStr = "Music in Queue:\n"
-          for (var i = 0; i < musicQueue.length; i++) {
-            queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+          //if queue has more than 10 items construct a reaction collector.
+          if (musicQueue.length > 10) {
+            let page = 1;
+            let queueStr = "Music in Queue:\n```";
+            for (var i = (page - 1) * 10; i < page * 10; i++) {
+              queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+            }
+            queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
+
+            await msg.channel.send(queueStr);
+            queueMsg = msg.channel.lastMessage;
+            await queueMsg.react('⬅️');
+            await queueMsg.react('➡️');
+
+            const filter = (reaction, user) => {
+              return ['⬅️', '➡️'].includes(reaction.emoji.name) && user.id === msg.author.id;
+            };
+
+            const collector = queueMsg.createReactionCollector(filter, { time: 30000 });
+
+            collector.on('collect', (reaction, user) => {
+              if (reaction.emoji.name === '⬅️' && page > 1) {
+                //go left
+                page -= 1;
+                let queueStr = "Music in Queue:\n```";
+                for (var i = (page - 1) * 10; i < (page * 10 < musicQueue.length ? page * 10 : musicQueue.length); i++) {
+                  queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                }
+                queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
+                queueMsg.edit(queueStr);
+              } else if (reaction.emoji.name === '➡️' && page < (Math.ceil(musicQueue.length / 10))) {
+                //go right
+                page += 1;
+                let queueStr = "Music in Queue:\n```";
+                for (var i = (page - 1) * 10; i < (page * 10 < musicQueue.length ? page * 10 : musicQueue.length); i++) {
+                  queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                }
+                queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
+                queueMsg.edit(queueStr);
+              }
+            });
+
+            collector.on('end', collected => {
+              console.log(`Collected ${collected.size} items`);
+            });
+          } else {
+            let queueStr = "Music in Queue:\n```";
+            for (var i = 0; i < musicQueue.length; i++) {
+              queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+            }
+            queueStr += "```";
+            msg.channel.send(queueStr);
           }
-          console.log(queueStr);
-          msg.channel.send(queueStr);
         }
         break;
       case "leave":
-        if (msg.member.voice.channel) {
+        if (msg.member.voice.channel && msg.member.voice.channel === msg.guild.voice.channel) {
           musicQueue = [];
           msg.member.voice.channel.leave();
           msg.reply("Left channel.");
@@ -140,7 +242,7 @@ client.on("message", async msg => {
         break;
       case "search":
         var modStr = msg.content.slice(8);
-        let searchStr = "Results: \n```";
+        let searchStr = "Results: \n```\n";
         sr = [];
         msg.channel.send("Searching for: " + modStr);
 
@@ -370,7 +472,9 @@ function isVowel(char) {
 async function nextSong(connection, msg) {
   if (musicQueue.length > 0) {
     msg.channel.send("Song Ended! Moving to next song..");
-    const dispatcher = connection.play(await ytdl(musicQueue[0].url), { type: 'opus' });
+    const dispatcher = connection.play(await ytdl(musicQueue[0].url).catch((err) => {
+      msg.reply("" + err);
+  }), { type: 'opus' });
     msg.channel.send(
       "Now playing: " + (await ytdl.getInfo(musicQueue[0].url)).videoDetails.title + " :musical_note:"
     );
