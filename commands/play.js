@@ -42,8 +42,10 @@ module.exports = {
                     connection.disconnect();
                 }), { type: 'opus' });
 
+                //console.log((await ytdl.getInfo(args[0])).videoDetails);
+
                 message.channel.send(
-                    "Now playing: " + (await ytdl.getInfo(args[0])).videoDetails.title + " :musical_note:"
+                    "Now playing: " + (await ytdl.getInfo(args[0])).videoDetails.title + " - " + ("" + new Date((await ytdl.getInfo(args[0])).videoDetails.lengthSeconds * 1000).toISOString().substr(11, 8)).replace(/^0(?:0:0?)?/, '') + " :musical_note:"
                 );
 
                 //on finish event attempt to play next song
@@ -75,22 +77,24 @@ module.exports = {
 
                     let title = (await ytdl.getInfo(args[0])).videoDetails.title;
                     message.reply(title + " has been added to the queue.");
-                    let len = new Date((await ytdl.getInfo(args[0])).videoDetails.lengthSeconds * 1000).toISOString().substr(11, 8);
+                    let len = ("" + new Date((await ytdl.getInfo(args[0])).videoDetails.lengthSeconds * 1000).toISOString().substr(11, 8)).replace(/^0(?:0:0?)?/, '');
                     musicQueue.push({ url: "" + (await ytdl.getInfo(args[0])).videoDetails.video_url, title: title, length: len });
                 }
             }
+        }else{
+            message.reply("Make sure you are in a voice channel first.");
         }
     },
     async nextSong(connection, message) {
         var musicQueue = message.client.guildData.get(message.guild.id).musicQueue;
 
         if (musicQueue.length > 0) {
-            message.channel.send("Song Ended! Moving to next song..");
+            message.channel.send("Moving to next song..");
             const dispatcher = connection.play(await ytdl(musicQueue[0].url).catch((err) => {
                 message.reply("" + err);
             }), { type: 'opus' });
             message.channel.send(
-                "Now playing: " + (await ytdl.getInfo(musicQueue[0].url)).videoDetails.title + " :musical_note:"
+                "Now playing: " + (await ytdl.getInfo(musicQueue[0].url)).videoDetails.title + " - " + musicQueue[0].length + " :musical_note:"
             );
 
             musicQueue.shift();

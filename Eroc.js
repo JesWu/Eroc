@@ -2,13 +2,12 @@ const fs = require('fs');
 const Discord = require("discord.js");
 
 const { prefix, token } = require("./config.json");
-const ytdl = require("ytdl-core-discord");
 const ytsr = require('ytsr');
-
-var musicQueue = [];
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
+
+//create a discord collection of data for each server the bot is running on.
 client.guildData = new Discord.Collection();
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
@@ -24,7 +23,9 @@ client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
   client.guilds.cache.forEach(guild => {
     client.guildData.set(guild.id, {musicQueue: []})
-  })
+  });
+  client.user.setPresence({ activity: { name: 'E' }, status: 'dnd' })
+  .catch(console.error);
 });
 
 client.on("message", async message => {
@@ -175,27 +176,4 @@ function isVowel(char) {
   return (
     char == "a" || char == "e" || char == "i" || char == "o" || char == "u"
   );
-}
-
-async function nextSong(connection, msg) {
-  if (musicQueue.length > 0) {
-    msg.channel.send("Song Ended! Moving to next song..");
-    const dispatcher = connection.play(await ytdl(musicQueue[0].url).catch((err) => {
-      msg.reply("" + err);
-    }), { type: 'opus' });
-    msg.channel.send(
-      "Now playing: " + (await ytdl.getInfo(musicQueue[0].url)).videoDetails.title + " :musical_note:"
-    );
-
-    musicQueue.shift();
-
-    dispatcher.on('finish', function () {
-      nextSong(connection, msg);
-    });
-
-  } else {
-    musicQueue = [];
-    msg.member.voice.channel.leave();
-    msg.channel.send("No music in queue, leaving channel.");
-  }
 }
