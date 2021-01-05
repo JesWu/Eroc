@@ -2,7 +2,6 @@ const fs = require('fs');
 const Discord = require("discord.js");
 
 const { prefix, uri, token } = require("./config.json");
-const ytsr = require('ytsr');
 
 const { MongoClient } = require('mongodb');
 const mclient = new MongoClient(uri, { useUnifiedTopology: true });
@@ -25,7 +24,7 @@ const cooldowns = new Discord.Collection();
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
   client.guilds.cache.forEach(guild => {
-    client.guildData.set(guild.id, { musicQueue: [] })
+    client.guildData.set(guild.id, { musicQueue: [], sr: [] })
   });
   client.user.setPresence({ activity: { name: 'E' }, status: 'dnd' })
     .catch(console.error);
@@ -111,23 +110,6 @@ client.on("message", async message => {
 
   /*
   switch (command) {
-    case "search":
-      var modStr = msg.content.slice(8);
-      let searchStr = "Results: \n```\n";
-      sr = [];
-      msg.channel.send("Searching for: " + modStr);
-
-      const filters1 = await ytsr.getFilters(modStr);
-      const filter1 = filters1.get('Type').get('Video');
-      const searchResults = await ytsr(filter1.url, { pages: 1 });
-      for (var i = 0; i < searchResults.items.length; i++) {
-        sr.push(searchResults.items[i]);
-        searchStr += (i + 1) + `. ${searchResults.items[i].title} ${searchResults.items[i].duration}\n`;
-      }
-      searchStr += "```";
-      msg.reply(searchStr);
-      //console.log(sr);
-      break;
     case "select":
       if (isNaN(args[0])) {
         msg.reply("Please enter a number.");
