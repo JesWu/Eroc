@@ -1,8 +1,11 @@
 const fs = require('fs');
 const Discord = require("discord.js");
 
-const { prefix, token } = require("./config.json");
+const { prefix, uri, token } = require("./config.json");
 const ytsr = require('ytsr');
+
+const { MongoClient } = require('mongodb');
+const mclient = new MongoClient(uri, { useUnifiedTopology: true });
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -22,21 +25,42 @@ const cooldowns = new Discord.Collection();
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
   client.guilds.cache.forEach(guild => {
-    client.guildData.set(guild.id, {musicQueue: []})
+    client.guildData.set(guild.id, { musicQueue: [] })
   });
   client.user.setPresence({ activity: { name: 'E' }, status: 'dnd' })
-  .catch(console.error);
+    .catch(console.error);
+  try {
+    mclient.connect();
+  } catch (e) {
+    console.error(e);
+  }
 });
 
 client.on("message", async message => {
   //if the message does not contain the prefix or is a bot message ignore it
-  if (message.author.bot || !message.content.startsWith(prefix)) return;
+  if (message.author.bot) return;
+
+  const result = await mclient.db("erocdb").collection("users")
+    .findOne({ _id: message.author.id });
+  if (!result) {
+    await mclient.db("erocdb").collection("users").insertOne({ _id: message.author.id, name: message.author.username, currency: 0});
+  }
+
+  if (Math.random() < .1) {
+    const result = await mclient.db("erocdb").collection("users")
+      .findOne({ _id: message.author.id });
+
+    await mclient.db("erocdb").collection("users")
+      .updateOne({ _id: message.author.id }, { $set: { currency: (result.currency + 1) }});
+  }
+
+  if (!message.content.startsWith(prefix)) return;
 
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
 
   const command = client.commands.get(commandName)
-  || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+    || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
 
   if (!command) return;
 
@@ -44,11 +68,11 @@ client.on("message", async message => {
   if (!cooldowns.has(command.name)) {
     cooldowns.set(command.name, new Discord.Collection());
   }
-  
+
   const now = Date.now();
   const timestamps = cooldowns.get(command.name);
   const cooldownAmount = (command.cooldown || 3) * 1000;
-  
+
   if (timestamps.has(message.author.id)) {
     const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
 
@@ -76,9 +100,9 @@ client.on("message", async message => {
 
     return message.channel.send(reply);
   }
-  
+
   try {
-    command.execute(message, args);
+    command.execute(message, args, mclient);
   } catch (error) {
     console.error(error);
     message.reply("Error executing command.");

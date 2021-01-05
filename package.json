@@ -14,6 +14,7 @@
     "discord.js": "^12.5.1",
     "ffmpeg": "0.0.4",
     "ffmpeg-static": "^4.2.7",
+    "mongodb": "^3.6.3",
     "ytdl": "^1.4.1",
     "ytdl-core-discord": "^1.2.5",
     "ytpl": "^2.0.4",

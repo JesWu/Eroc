@@ -1,5 +1,5 @@
 module.exports = {
-    name: 'clear queue',
+    name: 'clearqueue',
     description: 'clears song queue',
     aliases: ['clear', 'empty'],
     args: false,

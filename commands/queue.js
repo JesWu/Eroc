@@ -61,7 +61,7 @@ module.exports = {
             });
 
             collector.on('end', collected => {
-                console.log(`Collected ${collected.size} items`);
+                //console.log(`Collected ${collected.size} items`);
             });
         } else {
             let queueStr = "Music in Queue:\n```";
