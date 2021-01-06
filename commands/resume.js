@@ -8,7 +8,7 @@ module.exports = {
     guildOnly: true,
     execute(message) {
         //ensure user is in voice channel with bot
-        if (message.member.voice.channel && message.member.voice.channel === message.guild.voice.channel) {
+        if (message.member.voice.channel && message.guild.voice !=  null && message.member.voice.channel === message.guild.voice.channel) {
             message.guild.voice.connection.dispatcher.resume();
             message.reply("Song resumed.");
         } else {

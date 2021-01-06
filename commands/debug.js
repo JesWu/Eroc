@@ -1,6 +1,7 @@
 const {MongoClient} = require('mongodb');
 const { currency, uri } = require('../config.json');
 const client = new MongoClient(uri, { useNewUrlParser: true });
+const{ MessageEmbed } = require('discord.js');
 
 module.exports = {
 	name: 'debug',
@@ -10,34 +11,19 @@ module.exports = {
     usage: '',
     cooldown: 0,
     guildOnly: false,
-	async execute(message) {
-        try{
-            await client.connect();
+	execute(message) {
+        const embed = new MessageEmbed()
+        // Set the title of the field
+        .setTitle('Title')
+        // Set the color of the embed
+        .setColor(0xff0000)
+        // Set the main content of the embed
+        .setDescription('Description')
+        // Send the embed to the same channel as the message
+        .setAuthor(message.author.username, message.author.avatarURL())
+        .setThumbnail(message.author.avatarURL())
+        .setFooter('Select a number', message.author.avatarURL());
 
-            // await module.exports.createUser(client, {
-            //     _id: message.author.id,
-            //     currency: 0
-            // });
-
-            const result = await module.exports.findUser(client, message.author.id);
-            if(result){
-                message.reply(`You have: ${result.currency} ${currency}`);
-            }
-
-        } catch (e) {
-            console.error(e);
-        } finally {
-            await client.close();
-        }
+        message.reply(embed);
     },
-    async createUser(client, newUser) {
-        const result = await client.db("erocdb").collection("users").insertOne(newUser);
-        console.log(`New listing created with the following id: ${result.insertedId}`);
-    },
-    async findUser(client, userID) {
-        const result = await client.db("erocdb").collection("users")
-                            .findOne({ _id: userID });
-        
-        return result;
-    }
 };

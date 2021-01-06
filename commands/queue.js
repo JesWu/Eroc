@@ -1,3 +1,5 @@
+const{ MessageEmbed } = require('discord.js');
+
 module.exports = {
     name: 'queue',
     description: 'lists queue of songs',
@@ -15,13 +17,25 @@ module.exports = {
         //if queue has more than 10 items construct a reaction collector.
         if (musicQueue.length > 10) {
             let page = 1;
-            let queueStr = "Music in Queue:\n```";
+            
+            let queueStr = "";
             for (var i = (page - 1) * 10; i < page * 10; i++) {
-                queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                queueStr += (i + 1) + ". [" + musicQueue[i].title + "]("+musicQueue[i].url + ") - " + musicQueue[i].length + "\n";
             }
-            queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
 
-            await message.channel.send(queueStr);
+            const embed = new MessageEmbed()
+            // Set the title of the field
+            .setTitle('Music Queue:')
+            // Set the color of the embed
+            .setColor(0xff0000)
+            // Set the main content of the embed
+            .setDescription(queueStr)
+            // Send the embed to the same channel as the message
+            .setAuthor(message.author.username, message.author.avatarURL())
+            .setThumbnail(message.author.avatarURL())
+            .setFooter("Page " + page + " of " + (Math.ceil(musicQueue.length / 10)), message.author.avatarURL());
+
+            await message.channel.send(embed);
             var queuemessage = message.channel.lastMessage;
             await queuemessage.react('⬅️');
             await queuemessage.react('➡️');
@@ -37,24 +51,44 @@ module.exports = {
                     if (page > 1) {
                         //go left
                         page -= 1;
-                        let queueStr = "Music in Queue:\n```";
+                        let queueStr = "";
                         for (var i = (page - 1) * 10; i < (page * 10 < musicQueue.length ? page * 10 : musicQueue.length); i++) {
-                            queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                            queueStr += (i + 1) + ". [" + musicQueue[i].title + "]("+musicQueue[i].url + ") - " + musicQueue[i].length + "\n";
                         }
-                        queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
-                        queuemessage.edit(queueStr);
+                        const embed = new MessageEmbed()
+                        // Set the title of the field
+                        .setTitle('Music Queue:')
+                        // Set the color of the embed
+                        .setColor(0xff0000)
+                        // Set the main content of the embed
+                        .setDescription(queueStr)
+                        // Send the embed to the same channel as the message
+                        .setAuthor(message.author.username, message.author.avatarURL())
+                        .setThumbnail(message.author.avatarURL())
+                        .setFooter("Page " + page + " of " + (Math.ceil(musicQueue.length / 10)), message.author.avatarURL());
+                        queuemessage.edit(embed);
                     }
                     queuemessage.reactions.resolve('⬅️').users.remove(user.id)
                 } else if (reaction.emoji.name === '➡️') {
                     if (page < (Math.ceil(musicQueue.length / 10))) {
                         //go right
                         page += 1;
-                        let queueStr = "Music in Queue:\n```";
+                        let queueStr = "";
                         for (var i = (page - 1) * 10; i < (page * 10 < musicQueue.length ? page * 10 : musicQueue.length); i++) {
-                            queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                            queueStr += (i + 1) + ". [" + musicQueue[i].title + "]("+musicQueue[i].url + ") - " + musicQueue[i].length + "\n";
                         }
-                        queueStr += "```\nPage " + page + " of " + (Math.ceil(musicQueue.length / 10));
-                        queuemessage.edit(queueStr);
+                        const embed = new MessageEmbed()
+                        // Set the title of the field
+                        .setTitle('Music Queue:')
+                        // Set the color of the embed
+                        .setColor(0xff0000)
+                        // Set the main content of the embed
+                        .setDescription(queueStr)
+                        // Send the embed to the same channel as the message
+                        .setAuthor(message.author.username, message.author.avatarURL())
+                        .setThumbnail(message.author.avatarURL())
+                        .setFooter("Page " + page + " of " + (Math.ceil(musicQueue.length / 10)), message.author.avatarURL());
+                        queuemessage.edit(embed);
                     }
                     queuemessage.reactions.resolve('➡️').users.remove(user.id)
                 }

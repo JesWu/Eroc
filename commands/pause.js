@@ -7,7 +7,7 @@ module.exports = {
     cooldown: 5,
     guildOnly: true,
 	execute(message) {
-      if (message.member.voice.channel && message.member.voice.channel === message.guild.voice.channel) {
+      if (message.member.voice.channel && message.guild.voice !=  null && message.member.voice.channel === message.guild.voice.channel) {
         message.guild.voice.connection.dispatcher.pause();
         message.reply("Song paused.");
       } else {
