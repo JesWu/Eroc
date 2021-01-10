@@ -98,12 +98,22 @@ module.exports = {
                 //console.log(`Collected ${collected.size} items`);
             });
         } else {
-            let queueStr = "Music in Queue:\n```";
+            let queueStr = "";
             for (var i = 0; i < musicQueue.length; i++) {
-                queueStr += (i + 1) + ". " + musicQueue[i].title + " " + musicQueue[i].length + "\n";
+                queueStr += (i + 1) + ". [" + musicQueue[i].title + "]("+musicQueue[i].url + ") - " + musicQueue[i].length + "\n";
             }
-            queueStr += "```";
-            message.channel.send(queueStr);
+            const embed = new MessageEmbed()
+            // Set the title of the field
+            .setTitle('Music Queue:')
+            // Set the color of the embed
+            .setColor(0xff0000)
+            // Set the main content of the embed
+            .setDescription(queueStr)
+            // Send the embed to the same channel as the message
+            .setAuthor(message.author.username, message.author.avatarURL())
+            .setThumbnail(message.author.avatarURL());
+
+            message.channel.send(embed);
         }
     },
 };

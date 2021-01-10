@@ -3,7 +3,7 @@ const { prefix } = require('../config.json');
 module.exports = {
     name: 'help',
     description: 'Displays information on all available commands.',
-    aliases: ['h', 'commands', 'list'],
+    aliases: ['h', 'commands'],
     args: false,
     usage: '',
     cooldown: 5,

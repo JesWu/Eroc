@@ -24,7 +24,7 @@ const cooldowns = new Discord.Collection();
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
   client.guilds.cache.forEach(guild => {
-    client.guildData.set(guild.id, { musicQueue: [], playing: '' })
+    client.guildData.set(guild.id, { musicQueue: [], playing: '', searchID: new Set([])})
   });
   client.user.setPresence({ activity: { name: 'E' }, status: 'dnd' })
     .catch(console.error);

@@ -14,6 +14,7 @@ module.exports = {
     async execute(message, args) {
         var musicQueue = message.client.guildData.get(message.guild.id).musicQueue;
         var playing = message.client.guildData.get(message.guild.id).playing;
+        var searchID = message.client.guildData.get(message.guild.id).searchID;
         //console.log(musicQueue);
 
         if (message.member.voice.channel) {
@@ -47,7 +48,7 @@ module.exports = {
 
                 playing = args[0];
 
-                message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing });
+                message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing, searchID: searchID});
                 //console.log((await ytdl.getInfo(args[0])).videoDetails);
 
                 message.channel.send(
@@ -94,6 +95,7 @@ module.exports = {
     async nextSong(connection, message) {
         var musicQueue = message.client.guildData.get(message.guild.id).musicQueue;
         var playing = message.client.guildData.get(message.guild.id).playing;
+        var searchID = message.client.guildData.get(message.guild.id).searchID;
 
         if (musicQueue.length > 0) {
             message.channel.send("Moving to next song..");
@@ -107,7 +109,7 @@ module.exports = {
             playing = musicQueue[0].url;
             musicQueue.shift();
 
-            message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing });
+            message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing, searchID: searchID});
 
             dispatcher.on('finish', function () {
                 module.exports.nextSong(connection, message);
@@ -116,7 +118,7 @@ module.exports = {
         } else {
             musicQueue = [];
             playing = '';
-            message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing });
+            message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing, searchID: searchID});
             message.member.voice.channel.leave();
             message.channel.send("No music in queue, leaving channel.");
         }
@@ -124,7 +126,9 @@ module.exports = {
     async search(message, args) {
         var sr = [];
         var playing = message.client.guildData.get(message.guild.id).playing;
+        var searchID = message.client.guildData.get(message.guild.id).searchID;
         var searchStr = "";
+
         for (arg of args) {
             searchStr += arg + " ";
         }
@@ -151,16 +155,23 @@ module.exports = {
             // Send the embed to the same channel as the message
             .setAuthor(message.author.username, message.author.avatarURL())
             .setThumbnail(message.author.avatarURL())
-            .setFooter('Select a song by # (Timeout in 30s)', message.author.avatarURL());
+            .setFooter('Select a song by # (Timeout in 30s) | Type cancel to cancel', message.author.avatarURL());
 
         const filter = response => {
-            return (response.author.id === message.author.id && !isNaN(response.content) && response.content <= sr.length && response.content >= 1);
+            return (response.author.id === message.author.id && (!isNaN(response.content) && response.content <= sr.length && response.content >= 1) || response.content.toLowerCase() == 'cancel');
         };
+
+        if(searchID.has(message.author.id)) return message.reply("Users can only query 1 search at a time. Type cancel to cancel your existing search.");
+        searchID.add(message.author.id);
 
         message.channel.send(embed).then(() => {
             message.channel.awaitMessages(filter, { max: 1, time: 30000, errors: ['time'] })
                 .then(async (collected) => {
                     //console.log(collected.first().content);
+
+                    //remove here
+                    searchID.delete(message.author.id);
+                    if(collected.first().content == 'cancel') return message.reply("Search has been cancelled.");
 
                     const selectNum = (collected.first().content - 1);
 
@@ -185,7 +196,10 @@ module.exports = {
                         //console.log(musicQueue);
                     }
 
-                    message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing });
+                    message.client.guildData.set(message.guild.id, { musicQueue: musicQueue, playing: playing, searchID: searchID});
+                }).catch(collected =>{
+                    //remove here
+                    searchID.delete(message.author.id);
                 });
         });
     },
