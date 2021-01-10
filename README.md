@@ -1,5 +1,5 @@
 # Eroc
-Basic Private Server Discord Music bot
+Basic Discord bot
 
 ## Getting Started
 Setup instructions for getting Eroc up & running.
@@ -8,6 +8,7 @@ Setup instructions for getting Eroc up & running.
 You will need:
 - A discord account
 - Nodejs
+- mongodb(if you wish to use the currency system.)
 
 ### Installation
 Clone the given repository in your location of choice.
@@ -19,6 +20,27 @@ Make sure that discordjs is installed in your chosen directory
 ```
 npm install discord.js
 ```
+
+run ```npm install``` to install additional dependencies
+
+Create a file called ```config.json```
+
+Paste in it:
+```
+{
+    "prefix": "!",
+    "token": "",
+    "uri": "",
+    "currency": "🌟"
+}
+```
+Prefix denotes the command prefix used for intializing commands through discord text channels
+
+Token is where to paste the discord authorization token
+
+uri is used for mongodb
+
+currency is the emoji utilized for currency.
 
 Ask for an auth token, or create your own discord application/bot.
 
@@ -32,30 +54,27 @@ node bot.js
 Doing so will execute the bot and you will now be able to interact with it via discord.
 
 #### Commands
-Eroc comes with a variety of commands.
-Files poll.js and liarsdice.js implement a polling system and the game liarsdice(WIP).
-The prefix for Eroc is a tilda ~.
+Eroc comes with a variety of commands, listed in the commands directory.
 Some commands you can execute:
 ```
-~echo String
+!play <youtube url>
 ```
-Bot will echo whatever message you type in chat.
+bot will play music or search for a term if necessary
 ```
-~roll # #
+!server
 ```
-The first argument will allow for the number of sides of a dice (1 - #), the second argument will allow for the number of rolls.
+bot will display various information about the current server.
 ```
-~uwuify String
+!playing
 ```
-Uwuify will make the string inserted after the command cuter.
+bot will display information about the currently playing video
 ```
-~poll Question
+!help
 ```
-Polling will create a poll(only one can be active at a time) and pull up commands used specifically for polling.
-Currently only yes/no questions are supported.
+bot will send user a private message listing all current commands.
 
 ## Deployment
-TBD...
+Currently Eroc is deployed on a raspberry pi, running on 3 small servers.
 
 ## Author
 **Jeffrey Wu** - [JesWu](https://github.com/JesWu/)
